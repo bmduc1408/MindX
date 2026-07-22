@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Báo Cáo Phân Tích Nghỉ Việc | HR Attrition Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root {
+  --navy: #10213e;
+  --navy-2: #16305a;
+  --indigo: #3454d1;
+  --amber: #e8a13a;
+  --red: #d63447;
+  --green: #1f9d67;
+  --bg: #f3f5fa;
+  --card: #ffffff;
+  --ink: #16213e;
+  --ink-soft: #5c6b8a;
+  --border: #e4e8f2;
+  --mono: 'JetBrains Mono', monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Be Vietnam Pro', sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  line-height: 1.55;
+}
+.wrap { max-width: 1360px; margin: 0 auto; padding: 0 24px 80px; }
+
+/* ===== Header ===== */
+header.top {
+  background: linear-gradient(135deg, var(--navy) 0%, var(--navy-2) 60%, #1e3f7a 100%);
+  color: #fff;
+  padding: 44px 24px 34px;
+  position: relative;
+  overflow: hidden;
+}
+header.top::after {
+  content: "";
+  position: absolute; right: -80px; top: -80px;
+  width: 320px; height: 320px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(232,161,58,0.18) 0%, transparent 70%);
+}
+.top-inner { max-width: 1360px; margin: 0 auto; position: relative; z-index: 1; }
+.eyebrow {
+  font-family: var(--mono); font-size: 12px; letter-spacing: 3px; text-transform: uppercase;
+  color: var(--amber); font-weight: 700; margin-bottom: 10px;
+}
+h1 { font-size: 30px; font-weight: 800; margin-bottom: 8px; }
+.subtitle { color: #c3cde3; font-size: 14.5px; max-width: 720px; }
+.meta-row { display:flex; gap: 22px; margin-top: 22px; flex-wrap: wrap; font-size: 12.5px; color: #a9b6d4; }
+.meta-row span b { color: #fff; }
+
+/* ===== Nav tabs ===== */
+nav.tabs {
+  position: sticky; top: 0; z-index: 50;
+  background: rgba(255,255,255,0.92); backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--border);
+  display: flex; gap: 4px; padding: 10px 24px; overflow-x: auto;
+}
+nav.tabs .inner { max-width: 1360px; margin: 0 auto; display:flex; gap:6px; width:100%; }
+.tab-btn {
+  font-family: inherit; font-size: 13.5px; font-weight: 600; color: var(--ink-soft);
+  background: transparent; border: none; padding: 9px 16px; border-radius: 8px; cursor: pointer;
+  white-space: nowrap; transition: all .15s;
+}
+.tab-btn:hover { background: #eef1f9; color: var(--ink); }
+.tab-btn.active { background: var(--navy); color: #fff; }
+
+section.panel { display: none; padding-top: 32px; animation: fadeIn .25s ease; }
+section.panel.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+h2.sec-title { font-size: 20px; font-weight: 800; margin-bottom: 4px; display:flex; align-items:center; gap:10px; }
+h2.sec-title .num { font-family: var(--mono); color: var(--indigo); font-size: 15px; }
+p.sec-desc { color: var(--ink-soft); font-size: 13.5px; margin-bottom: 20px; max-width: 780px; }
+
+/* ===== KPI cards ===== */
+.kpi-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px; margin-bottom: 28px; }
+.kpi-card {
+  background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+  padding: 18px 16px; position: relative; overflow: hidden;
+}
+.kpi-card .kpi-label { font-size: 11.5px; color: var(--ink-soft); font-weight: 600; text-transform: uppercase; letter-spacing: .4px; margin-bottom: 8px; }
+.kpi-card .kpi-value { font-family: var(--mono); font-size: 25px; font-weight: 700; color: var(--navy); }
+.kpi-card .kpi-sub { font-size: 11.5px; color: var(--ink-soft); margin-top: 4px; }
+.kpi-card.warn .kpi-value { color: var(--red); }
+.kpi-card.good .kpi-value { color: var(--green); }
+.kpi-card .bar-accent { position:absolute; left:0; top:0; bottom:0; width:4px; background: var(--indigo); }
+.kpi-card.warn .bar-accent { background: var(--red); }
+.kpi-card.good .bar-accent { background: var(--green); }
+
+/* ===== Grid / cards ===== */
+.grid-2 { display: grid; grid-template-columns: 1.3fr 1fr; gap: 18px; margin-bottom: 18px; }
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-bottom: 18px; }
+.card {
+  background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 20px;
+}
+.card h3 { font-size: 14.5px; font-weight: 700; margin-bottom: 4px; }
+.card .chart-note { font-size: 11.5px; color: var(--ink-soft); margin-bottom: 14px; }
+.chart-box { position: relative; }
+
+/* ===== Risk table ===== */
+table.risk-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+table.risk-table th {
+  text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .4px;
+  color: var(--ink-soft); font-weight: 700; padding: 8px 10px; border-bottom: 2px solid var(--border);
+}
+table.risk-table td { padding: 10px 10px; border-bottom: 1px solid var(--border); }
+table.risk-table tr:hover td { background: #f7f9fd; }
+.pill { display:inline-block; padding: 3px 10px; border-radius: 20px; font-family: var(--mono); font-weight: 700; font-size: 12px; }
+.pill.crit { background: #fde8ea; color: var(--red); }
+.pill.high { background: #fdf1de; color: #b7761c; }
+.pill.med { background: #fff8de; color: #8a7415; }
+.pill.low { background: #e3f6ec; color: var(--green); }
+
+/* ===== Insight cards ===== */
+.insight-card {
+  border-radius: 14px; padding: 18px 20px; border: 1px solid var(--border); background: var(--card);
+  border-left: 4px solid var(--indigo);
+}
+.insight-card.crit { border-left-color: var(--red); }
+.insight-card.warn { border-left-color: var(--amber); }
+.insight-card.good { border-left-color: var(--green); }
+.insight-card .tag { font-family: var(--mono); font-size: 10.5px; text-transform: uppercase; letter-spacing: .5px; color: var(--ink-soft); font-weight: 700; margin-bottom: 6px; display:block; }
+.insight-card h4 { font-size: 14.5px; margin-bottom: 6px; }
+.insight-card p { font-size: 13px; color: var(--ink-soft); }
+
+/* ===== Priority / recommendation cards ===== */
+.priority-card {
+  background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 22px; margin-bottom: 16px;
+}
+.priority-head { display:flex; align-items:center; gap: 12px; margin-bottom: 10px; }
+.priority-rank {
+  width: 32px; height: 32px; border-radius: 9px; background: var(--navy); color:#fff;
+  display:flex; align-items:center; justify-content:center; font-family: var(--mono); font-weight:700; font-size:14px; flex-shrink:0;
+}
+.priority-head h3 { font-size: 16px; font-weight: 800; }
+.priority-body { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 12px; }
+.priority-col .col-label { font-family: var(--mono); font-size: 10.5px; text-transform: uppercase; letter-spacing:.5px; font-weight: 700; margin-bottom: 6px; }
+.priority-col.do .col-label { color: var(--green); }
+.priority-col.tradeoff .col-label { color: var(--amber); }
+.priority-col p, .priority-col li { font-size: 13px; color: var(--ink-soft); }
+.priority-col ul { padding-left: 18px; }
+.evidence-strip { margin-top: 12px; padding: 10px 14px; background: #f3f5fa; border-radius: 8px; font-family: var(--mono); font-size: 11.5px; color: var(--navy); }
+
+/* ===== Conclusion box ===== */
+.conclusion-box {
+  background: linear-gradient(135deg, var(--navy) 0%, #1e3f7a 100%); color: #fff;
+  border-radius: 16px; padding: 30px 32px; margin-top: 10px;
+}
+.conclusion-box h3 { font-size: 18px; margin-bottom: 12px; color: var(--amber); }
+.conclusion-box p { font-size: 14px; color: #dbe2f2; margin-bottom: 10px; }
+.conclusion-grid { display:grid; grid-template-columns: repeat(3,1fr); gap: 16px; margin-top: 18px; }
+.conclusion-grid .mini { background: rgba(255,255,255,0.08); border-radius: 10px; padding: 14px 16px; }
+.conclusion-grid .mini .mv { font-family: var(--mono); font-size: 20px; font-weight:700; color: var(--amber); }
+.conclusion-grid .mini .ml { font-size: 11.5px; color: #c3cde3; margin-top: 4px; }
+
+footer { text-align:center; padding: 26px; font-size: 11.5px; color: var(--ink-soft); }
+
+@media (max-width: 980px) {
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  .grid-2, .grid-3, .priority-body, .conclusion-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="top-inner">
+    <div class="eyebrow">HR Analytics · Decision Brief cho Ban Giám Đốc</div>
+    <h1>Báo Cáo Phân Tích Nghỉ Việc (Employee Attrition)</h1>
+    <p class="subtitle">Phân tích 1,470 hồ sơ nhân sự nhằm xác định nhóm rủi ro nghỉ việc cao, nguyên nhân cốt lõi và ưu tiên hành động cho HR &amp; Ban Lãnh Đạo.</p>
+    <div class="meta-row">
+      <span>Cỡ mẫu: <b>1,470 nhân sự</b></span>
+      <span>Số nghỉ việc: <b>237 người</b></span>
+      <span>Tỷ lệ nghỉ việc: <b>16.1%</b></span>
+      <span>Nguồn: <b>HR_Employee_Attrition.csv</b></span>
+    </div>
+  </div>
+</header>
+
+<nav class="tabs">
+  <div class="inner">
+    <button class="tab-btn active" data-tab="t1">1. Tổng quan</button>
+    <button class="tab-btn" data-tab="t2">2. Ai đang rời đi</button>
+    <button class="tab-btn" data-tab="t3">3. Vì sao họ rời đi</button>
+    <button class="tab-btn" data-tab="t4">4. Ưu tiên hành động</button>
+  </div>
+</nav>
+
+<div class="wrap">
+
+<!-- ============ TAB 1: TỔNG QUAN ============ -->
+<section class="panel active" id="t1">
+  <h2 class="sec-title"><span class="num">01</span> Bức tranh tổng quan nghỉ việc</h2>
+  <p class="sec-desc">Tỷ lệ nghỉ việc chung và khoảng cách giữa nhóm ở lại so với nhóm rời đi trên các chỉ số cốt lõi.</p>
+
+  <div class="kpi-grid">
+    <div class="kpi-card warn"><div class="bar-accent"></div>
+      <div class="kpi-label">Tỷ lệ nghỉ việc</div>
+      <div class="kpi-value">16.1%</div>
+      <div class="kpi-sub">237/1,470 nhân sự</div></div>
+    <div class="kpi-card"><div class="bar-accent"></div>
+      <div class="kpi-label">Tổng nhân sự phân tích</div>
+      <div class="kpi-value">1,470</div>
+      <div class="kpi-sub">Toàn bộ mẫu dữ liệu</div></div>
+    <div class="kpi-card"><div class="bar-accent"></div>
+      <div class="kpi-label">Số đơn nghỉ việc</div>
+      <div class="kpi-value">237</div>
+      <div class="kpi-sub">Trong kỳ phân tích</div></div>
+    <div class="kpi-card warn"><div class="bar-accent"></div>
+      <div class="kpi-label">Chênh lệch thu nhập</div>
+      <div class="kpi-value">-30%</div>
+      <div class="kpi-sub">$4,787 vs $6,833/tháng</div></div>
+    <div class="kpi-card warn"><div class="bar-accent"></div>
+      <div class="kpi-label">Chênh lệch thâm niên</div>
+      <div class="kpi-value">-2.3y</div>
+      <div class="kpi-sub">5.1y vs 7.4y trung bình</div></div>
+    <div class="kpi-card warn"><div class="bar-accent"></div>
+      <div class="kpi-label">Tỷ lệ nghỉ việc (có OT)</div>
+      <div class="kpi-value">30.5%</div>
+      <div class="kpi-sub">Gấp ~3 lần nhóm không OT</div></div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <h3>Tỷ lệ nghỉ việc theo Phòng ban</h3>
+      <p class="chart-note">Cột = tỷ lệ nghỉ việc (%); nhãn = số người nghỉ / tổng headcount.</p>
+      <div class="chart-box"><canvas id="chartDept" height="230"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>Cơ cấu nghỉ việc theo Tình trạng OT</h3>
+      <p class="chart-note">Overtime là yếu tố tách biệt rõ nhất giữa 2 nhóm.</p>
+      <div class="chart-box"><canvas id="chartOTDonut" height="230"></canvas></div>
+    </div>
+  </div>
+
+  <div class="grid-3">
+    <div class="insight-card crit">
+      <span class="tag">Fact</span>
+      <h4>Tỷ lệ nghỉ việc chung 16.1%</h4>
+      <p>237 trên 1,470 nhân sự đã nghỉ trong kỳ dữ liệu — cao hơn ngưỡng "khỏe mạnh" thường dùng trong ngành (8-12%).</p>
+    </div>
+    <div class="insight-card warn">
+      <span class="tag">Fact</span>
+      <h4>Người nghỉ trẻ hơn và mới hơn</h4>
+      <p>Tuổi trung bình nhóm nghỉ việc 33.6 so với 37.6 của nhóm ở lại; thâm niên thấp hơn ~2.3 năm.</p>
+    </div>
+    <div class="insight-card crit">
+      <span class="tag">Fact</span>
+      <h4>Thu nhập là khoảng cách lớn nhất</h4>
+      <p>Nhóm nghỉ việc có thu nhập trung bình thấp hơn ~30% so với nhóm ở lại ($4,787 vs $6,833).</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ TAB 2: AI ĐANG RỜI ĐI ============ -->
+<section class="panel" id="t2">
+  <h2 class="sec-title"><span class="num">02</span> Nhóm nào đang rời đi &amp; ảnh hưởng thế nào</h2>
+  <p class="sec-desc">Phân rã tỷ lệ nghỉ việc theo Vai trò, Cấp bậc, Hôn nhân, Tuổi, Thâm niên, Thu nhập, Khoảng cách và tổ hợp rủi ro giao thoa (intersecting risk).</p>
+
+  <div class="grid-2">
+    <div class="card">
+      <h3>Tỷ lệ nghỉ việc theo Vai trò công việc</h3>
+      <p class="chart-note">Sales Representative là nhóm rủi ro cao nhất: gần 4/10 người nghỉ việc.</p>
+      <div class="chart-box"><canvas id="chartRole" height="260"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>Cấp bậc &amp; Cổ phần thưởng (Stock Option)</h3>
+      <p class="chart-note">Nhân viên bậc 1, không có cổ phần thưởng có rủi ro nghỉ việc cao nhất.</p>
+      <div class="chart-box"><canvas id="chartLevel" height="260"></canvas></div>
+    </div>
+  </div>
+
+  <div class="grid-3">
+    <div class="card">
+      <h3>Theo Nhóm tuổi</h3>
+      <div class="chart-box"><canvas id="chartAge" height="200"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>Theo Thâm niên</h3>
+      <div class="chart-box"><canvas id="chartTenure" height="200"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>Theo Nhóm thu nhập</h3>
+      <div class="chart-box"><canvas id="chartIncome" height="200"></canvas></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:18px;">
+    <h3>Phương pháp phân nhóm thu nhập (Income Quartile) <span class="tag" style="display:inline;font-family:var(--mono);font-size:10.5px;color:var(--ink-soft);font-weight:700;">METHODOLOGY</span></h3>
+    <p class="chart-note">Nhóm Q1→Q4 chia theo <b>phân vị (percentile)</b> của MonthlyIncome trên toàn bộ 1,470 nhân sự — dùng <code>pd.qcut(MonthlyIncome, 4)</code>, không phải chia theo mốc số tiền cố định. Mỗi nhóm chứa ~25% mẫu (~368 người) bằng nhau về số lượng, không bằng nhau về độ rộng khoảng tiền.</p>
+    <table class="risk-table" style="margin-bottom:12px;">
+      <thead><tr><th>Nhóm</th><th>Khoảng thu nhập/tháng ($)</th><th>Ý nghĩa</th></tr></thead>
+      <tbody>
+        <tr><td><b>Q1 (thấp nhất)</b></td><td>1,009 – 2,911</td><td>25% người có thu nhập thấp nhất</td></tr>
+        <tr><td><b>Q2</b></td><td>2,912 – 4,919</td><td>25% kế tiếp</td></tr>
+        <tr><td><b>Q3</b></td><td>4,920 – 8,379</td><td>25% kế tiếp</td></tr>
+        <tr><td><b>Q4 (cao nhất)</b></td><td>8,380 – 19,999</td><td>25% người có thu nhập cao nhất</td></tr>
+      </tbody>
+    </table>
+    <div class="grid-2" style="margin-bottom:0;">
+      <div class="insight-card">
+        <span class="tag">Lý do dùng Quartile thay vì Range cố định</span>
+        <p>Phân phối thu nhập lệch phải mạnh ($1,009 → $19,999). Chia range đều sẽ khiến Q4 chứa quá ít người, làm tỷ lệ nghỉ việc từng nhóm mất độ tin cậy thống kê. Quartile giữ cỡ mẫu đều giữa các nhóm.</p>
+      </div>
+      <div class="insight-card warn">
+        <span class="tag">Data grain — cần lưu ý khi đọc số</span>
+        <p>Quartile tính trên <b>toàn công ty</b>, không phân theo Department/JobLevel. Một người JobLevel 1 thu nhập $3,000 rơi vào Q2 dù có thể là mức cao trong nhóm entry-level — số liệu "Q1 → 29.3% nghỉ việc" là so sánh chéo toàn tổ chức, không so với peer cùng cấp bậc.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:18px;">
+    <h3>Tổ hợp rủi ro giao thoa (Intersecting Risk Segments)</h3>
+    <p class="chart-note">Khi kết hợp nhiều yếu tố cùng lúc, tỷ lệ nghỉ việc tăng vọt — đây là nhóm cần can thiệp ưu tiên nhất.</p>
+    <table class="risk-table">
+      <thead><tr><th>Tổ hợp đặc điểm</th><th>Headcount</th><th>Số nghỉ việc</th><th>Tỷ lệ nghỉ việc</th></tr></thead>
+      <tbody id="riskTableBody"></tbody>
+    </table>
+  </div>
+
+  <div class="grid-3">
+    <div class="insight-card crit">
+      <span class="tag">Evidence</span>
+      <h4>Rủi ro cực cao: OT + Bậc 1 + Độc thân</h4>
+      <p>67.8% (40/59 người) trong nhóm này đã nghỉ việc — cao gấp 4.2 lần tỷ lệ chung.</p>
+    </div>
+    <div class="insight-card crit">
+      <span class="tag">Evidence</span>
+      <h4>Sales Representative làm OT</h4>
+      <p>66.7% (16/24 người) nghỉ việc — nhóm tuyến đầu áp lực doanh số, thu nhập thấp.</p>
+    </div>
+    <div class="insight-card warn">
+      <span class="tag">Ảnh hưởng doanh nghiệp</span>
+      <h4>Rủi ro tập trung vào lực lượng tuyến đầu, mới gia nhập</h4>
+      <p>Mất nhân sự ở giai đoạn 0-1 năm (34.9% nghỉ) làm tăng chi phí tuyển dụng &amp; đào tạo lại, ảnh hưởng năng suất Sales &amp; R&amp;D.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ TAB 3: VÌ SAO HỌ RỜI ĐI ============ -->
+<section class="panel" id="t3">
+  <h2 class="sec-title"><span class="num">03</span> Lý do rời đi</h2>
+  <p class="sec-desc">Thang đo khảo sát nội bộ từ 1 (thấp) → 4 (cao). So sánh điểm trung bình giữa nhóm ở lại và nhóm nghỉ việc để xác định khoảng cách cảm nhận (perception gap) — đây là <b>correlation</b>, không kết luận nhân quả tuyệt đối.</p>
+
+  <div class="grid-2">
+    <div class="card">
+      <h3>So sánh điểm hài lòng (thang 1→4)</h3>
+      <p class="chart-note">Khoảng cách càng lớn, mức độ liên quan đến quyết định nghỉ việc càng đáng chú ý.</p>
+      <div class="chart-box"><canvas id="chartRadar" height="270"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>Khoảng cách theo Thâm niên chức vụ &amp; Thăng tiến</h3>
+      <p class="chart-note">Tỷ lệ nghỉ việc theo số năm kể từ lần thăng chức gần nhất.</p>
+      <div class="chart-box"><canvas id="chartPromo" height="270"></canvas></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:18px;">
+    <h3>So sánh chỉ số định lượng: Ở lại vs Nghỉ việc</h3>
+    <p class="chart-note">Đơn vị gốc khác nhau (USD, năm, km) — biểu đồ dùng để nhìn chiều hướng chênh lệch, không so sánh trực tiếp giá trị tuyệt đối.</p>
+    <div class="chart-box"><canvas id="chartNumeric" height="230"></canvas></div>
+  </div>
+
+  <div class="grid-3">
+    <div class="insight-card crit">
+      <span class="tag">Correlation, không phải Causation</span>
+      <h4>Hài lòng công việc &amp; môi trường thấp hơn rõ rệt</h4>
+      <p>Nhóm nghỉ việc có điểm hài lòng công việc 2.47 vs 2.78, môi trường 2.46 vs 2.77 — khoảng cách lớn nhất trong 5 chỉ số khảo sát.</p>
+    </div>
+    <div class="insight-card warn">
+      <span class="tag">Fact</span>
+      <h4>Thu nhập &amp; cơ hội phát triển thấp hơn</h4>
+      <p>Thu nhập thấp hơn ~30%, số năm ở vị trí hiện tại và với quản lý hiện tại đều ngắn hơn — gợi ý thiếu gắn kết dài hạn.</p>
+    </div>
+    <div class="insight-card">
+      <span class="tag">Assumption cần kiểm chứng</span>
+      <h4>Khoảng cách di chuyển góp phần nhỏ</h4>
+      <p>Nhóm ở xa nơi làm việc (21-30km) có tỷ lệ nghỉ việc 22.1% so với 13.8% ở nhóm gần — cần thêm dữ liệu định tính để xác nhận nguyên nhân.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ TAB 4: ƯU TIÊN HÀNH ĐỘNG ============ -->
+<section class="panel" id="t4">
+  <h2 class="sec-title"><span class="num">04</span> Công ty cần ưu tiên gì để giảm tỷ lệ nghỉ việc</h2>
+  <p class="sec-desc">4 ưu tiên xếp theo mức độ tác động ước tính, mỗi ưu tiên kèm trade-off cụ thể để Ban Giám Đốc cân nhắc — không có phương án nào miễn phí.</p>
+
+  <div class="priority-card">
+    <div class="priority-head"><div class="priority-rank">1</div><h3>Kiểm soát Overtime tại nhóm rủi ro cao (Sales, Bậc 1)</h3></div>
+    <div class="priority-body">
+      <div class="priority-col do">
+        <div class="col-label">Hành động đề xuất</div>
+        <ul>
+          <li>Rà soát định mức OT tại Sales &amp; Lab Technician</li>
+          <li>Thí điểm giới hạn OT + bù đãi ngộ tương xứng cho nhóm Bậc 1</li>
+        </ul>
+      </div>
+      <div class="priority-col tradeoff">
+        <div class="col-label">Trade-off</div>
+        <p>Giảm OT có thể ảnh hưởng ngắn hạn đến doanh số/tiến độ sản xuất nếu không tăng nhân sự bù đắp — cần cân đối chi phí tuyển thêm vs. chi phí thay thế người nghỉ.</p>
+      </div>
+    </div>
+    <div class="evidence-strip">Evidence: OT + Bậc 1 + Độc thân → 67.8% nghỉ việc (n=59) · OT nói chung → 30.5% vs 10.4% (không OT)</div>
+  </div>
+
+  <div class="priority-card">
+    <div class="priority-head"><div class="priority-rank">2</div><h3>Rà soát chính sách lương nhóm thu nhập thấp &amp; Sales Representative</h3></div>
+    <div class="priority-body">
+      <div class="priority-col do">
+        <div class="col-label">Hành động đề xuất</div>
+        <ul>
+          <li>Benchmark lương Q1 (thấp nhất) so với thị trường</li>
+          <li>Xem xét cơ chế thưởng theo hiệu suất cho Sales Representative</li>
+        </ul>
+      </div>
+      <div class="priority-col tradeoff">
+        <div class="col-label">Trade-off</div>
+        <p>Tăng ngân sách lương ảnh hưởng trực tiếp đến biên lợi nhuận — nên ưu tiên nhóm có tỷ lệ nghỉ việc + chi phí thay thế cao nhất trước, không tăng đại trà.</p>
+      </div>
+    </div>
+    <div class="evidence-strip">Evidence: Nhóm thu nhập Q1 → 29.3% nghỉ việc vs 10.3% ở Q4 · OT + Thu nhập thấp nhất → 58.5% (n=106)</div>
+  </div>
+
+  <div class="priority-card">
+    <div class="priority-head"><div class="priority-rank">3</div><h3>Chương trình Onboarding &amp; giữ chân 12 tháng đầu</h3></div>
+    <div class="priority-body">
+      <div class="priority-col do">
+        <div class="col-label">Hành động đề xuất</div>
+        <ul>
+          <li>Thiết lập mốc check-in 30-60-90 ngày cho nhân sự mới</li>
+          <li>Gán mentor cho nhân sự Bậc 1 trong năm đầu</li>
+        </ul>
+      </div>
+      <div class="priority-col tradeoff">
+        <div class="col-label">Trade-off</div>
+        <p>Cần đầu tư thời gian quản lý cấp trung — có thể tạm thời giảm năng suất của người mentor nếu không tính vào KPI của họ.</p>
+      </div>
+    </div>
+    <div class="evidence-strip">Evidence: Thâm niên 0-1 năm → 34.9% nghỉ việc, cao nhất trong các nhóm thâm niên · Bậc 1 + Thâm niên ≤1 năm → 44.1% (n=136)</div>
+  </div>
+
+  <div class="priority-card">
+    <div class="priority-head"><div class="priority-rank">4</div><h3>Cải thiện lộ trình thăng tiến &amp; hài lòng công việc</h3></div>
+    <div class="priority-body">
+      <div class="priority-col do">
+        <div class="col-label">Hành động đề xuất</div>
+        <ul>
+          <li>Rà soát chu kỳ xét thăng chức tại các vị trí có tỷ lệ nghỉ cao</li>
+          <li>Khảo sát định kỳ Job Satisfaction / Environment Satisfaction để phát hiện sớm</li>
+        </ul>
+      </div>
+      <div class="priority-col tradeoff">
+        <div class="col-label">Trade-off</div>
+        <p>Đây là giải pháp tác động dài hạn, cần thời gian để đo lường hiệu quả — không giải quyết được rủi ro nghỉ việc cấp bách trong 1-2 quý tới.</p>
+      </div>
+    </div>
+    <div class="evidence-strip">Evidence: Điểm hài lòng công việc nhóm nghỉ 2.47 vs 2.78 nhóm ở lại (thang 1-4) · Vừa thăng chức gần đây → 18.9% vẫn nghỉ, cần theo dõi thêm giai đoạn hậu thăng chức</div>
+  </div>
+</section>
+
+</div>
+
+<footer>Báo cáo được tạo tự động từ dữ liệu HR_Employee_Attrition.csv · Chỉ dùng cho mục đích nội bộ · Không chứa thông tin định danh cá nhân (PII)</footer>
+
+
+<script>
+const DATA = {"overview": {"total": 1470, "leavers": 237, "rate": 16.1, "avgIncomeStay": 6833.0, "avgIncomeLeave": 4787.0, "avgTenureStay": 7.4, "avgTenureLeave": 5.1, "avgAgeStay": 37.6, "avgAgeLeave": 33.6, "otRate": 30.5}, "department": {"labels": ["Sales", "Human Resources", "Research & Development"], "headcount": [446, 63, 961], "leavers": [92, 12, 133], "rate": [20.6, 19.0, 13.8]}, "jobrole": {"labels": ["Sales Representative", "Laboratory Technician", "Human Resources", "Sales Executive", "Research Scientist", "Healthcare Representative", "Manufacturing Director", "Manager", "Research Director"], "headcount": [83, 259, 52, 326, 292, 131, 145, 102, 80], "leavers": [33, 62, 12, 57, 47, 9, 10, 5, 2], "rate": [39.8, 23.9, 23.1, 17.5, 16.1, 6.9, 6.9, 4.9, 2.5]}, "overtime": {"labels": ["Yes", "No"], "headcount": [416, 1054], "leavers": [127, 110], "rate": [30.5, 10.4]}, "travel": {"labels": ["Travel_Frequently", "Travel_Rarely", "Non-Travel"], "headcount": [277, 1043, 150], "leavers": [69, 156, 12], "rate": [24.9, 15.0, 8.0]}, "marital": {"labels": ["Single", "Married", "Divorced"], "headcount": [470, 673, 327], "leavers": [120, 84, 33], "rate": [25.5, 12.5, 10.1]}, "joblevel": {"labels": [1, 2, 3, 4, 5], "headcount": [543, 534, 218, 106, 69], "leavers": [143, 52, 32, 5, 5], "rate": [26.3, 9.7, 14.7, 4.7, 7.2]}, "stockoption": {"labels": [0, 1, 2, 3], "headcount": [631, 596, 158, 85], "leavers": [154, 56, 12, 15], "rate": [24.4, 9.4, 7.6, 17.6]}, "agegroup": {"labels": ["18-25", "26-30", "31-35", "36-40", "41-45", "46-50", "51-60"], "headcount": [123, 263, 343, 276, 192, 130, 143], "leavers": [44, 56, 60, 25, 18, 16, 18], "rate": [35.8, 21.3, 17.5, 9.1, 9.4, 12.3, 12.6]}, "tenuregroup": {"labels": ["0-1 năm", "1-3 năm", "3-5 năm", "5-10 năm", ">10 năm"], "headcount": [215, 255, 306, 448, 246], "leavers": [75, 47, 40, 55, 20], "rate": [34.9, 18.4, 13.1, 12.3, 8.1]}, "incomeq": {"labels": ["Q1 (thấp nhất)", "Q2", "Q3", "Q4 (cao nhất)"], "headcount": [369, 366, 367, 368], "leavers": [108, 52, 39, 38], "rate": [29.3, 14.2, 10.6, 10.3]}, "distgroup": {"labels": ["0-5km", "6-10km", "11-20km", "21-30km"], "headcount": [632, 394, 240, 204], "leavers": [87, 57, 48, 45], "rate": [13.8, 14.5, 20.0, 22.1]}, "promogroup": {"labels": ["Vừa thăng chức", "1-2 năm", "3-5 năm", ">5 năm"], "headcount": [581, 516, 158, 215], "leavers": [110, 76, 16, 35], "rate": [18.9, 14.7, 10.1, 16.3]}, "satisfaction": {"labels": ["Hài lòng công việc", "Hài lòng môi trường", "Cân bằng CV-CS", "Gắn kết công việc", "Quan hệ đồng nghiệp"], "stay": [2.78, 2.77, 2.78, 2.77, 2.73], "leave": [2.47, 2.46, 2.66, 2.52, 2.6]}, "numeric_compare": {"labels": ["Thu nhập/tháng ($)", "Tuổi", "Tổng năm KN", "Thâm niên (năm)", "Năm ở vị trí hiện tại", "Năm từ lần thăng chức gần nhất", "Năm với QL hiện tại", "Khoảng cách nhà (km)", "Số công ty đã làm", "Số lần đào tạo/năm"], "stay": [6832.7, 37.6, 11.9, 7.4, 4.5, 2.2, 4.4, 8.9, 2.6, 2.8], "leave": [4787.1, 33.6, 8.2, 5.1, 2.9, 1.9, 2.9, 10.6, 2.9, 2.6]}, "highrisk_combos": [{"name": "OT + Bậc 1 + Độc thân", "n": 59, "leavers": 40, "rate": 67.8}, {"name": "OT + Sales Representative", "n": 24, "leavers": 16, "rate": 66.7}, {"name": "OT + Thu nhập nhóm thấp nhất", "n": 106, "leavers": 62, "rate": 58.5}, {"name": "OT + Độc thân", "n": 131, "leavers": 65, "rate": 49.6}, {"name": "OT + Thâm niên ≤1 năm", "n": 69, "leavers": 38, "rate": 55.1}, {"name": "Bậc 1 + Thâm niên ≤1 năm", "n": 136, "leavers": 60, "rate": 44.1}]};
+
+Chart.defaults.font.family = "'Be Vietnam Pro', sans-serif";
+Chart.defaults.color = '#5c6b8a';
+Chart.defaults.font.size = 11.5;
+
+const COLORS = {
+  navy: '#10213e', indigo: '#3454d1', amber: '#e8a13a', red: '#d63447',
+  green: '#1f9d67', grey: '#c3cde3'
+};
+
+function rateColor(r) {
+  if (r >= 25) return COLORS.red;
+  if (r >= 15) return COLORS.amber;
+  if (r >= 8) return '#d4af37';
+  return COLORS.green;
+}
+
+function barRateChart(ctx, labels, rates, opts) {
+  opts = opts || {};
+  return new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Tỷ lệ nghỉ việc (%)',
+        data: rates,
+        backgroundColor: rates.map(rateColor),
+        borderRadius: 6,
+        maxBarThickness: 42
+      }]
+    },
+    options: {
+      indexAxis: opts.horizontal ? 'y' : 'x',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: (c) => c.parsed.y ?? c.parsed.x + '%' + ' nghỉ việc' } }
+      },
+      scales: {
+        x: { grid: { display: !opts.horizontal, color: '#eef1f9' }, ticks: { callback: v => opts.horizontal ? v+'%' : undefined } },
+        y: { grid: { display: opts.horizontal, color: '#eef1f9' }, ticks: { callback: v => !opts.horizontal ? v+'%' : undefined } }
+      }
+    }
+  });
+}
+
+// --- Department ---
+barRateChart(document.getElementById('chartDept'), DATA.department.labels, DATA.department.rate);
+
+// --- OT Donut ---
+new Chart(document.getElementById('chartOTDonut'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Có OT - Nghỉ việc', 'Có OT - Ở lại', 'Không OT - Nghỉ việc', 'Không OT - Ở lại'],
+    datasets: [{
+      data: [DATA.overtime.leavers[0], DATA.overtime.headcount[0]-DATA.overtime.leavers[0], DATA.overtime.leavers[1], DATA.overtime.headcount[1]-DATA.overtime.leavers[1]],
+      backgroundColor: [COLORS.red, '#f3c9ce', COLORS.indigo, '#c7d1f5'],
+      borderWidth: 2, borderColor: '#fff'
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, padding: 12, font: { size: 11 } } } }
+  }
+});
+
+// --- Job Role (horizontal) ---
+barRateChart(document.getElementById('chartRole'), DATA.jobrole.labels, DATA.jobrole.rate, {horizontal: true});
+
+// --- Job Level + Stock Option combined ---
+new Chart(document.getElementById('chartLevel'), {
+  type: 'bar',
+  data: {
+    labels: ['Bậc 1','Bậc 2','Bậc 3','Bậc 4','Bậc 5'],
+    datasets: [
+      { label: 'Theo Cấp bậc (%)', data: DATA.joblevel.rate, backgroundColor: COLORS.indigo, borderRadius: 6, maxBarThickness: 32 },
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: true, position: 'bottom' } },
+    scales: { y: { ticks: { callback: v => v+'%' }, grid: { color: '#eef1f9' } }, x: { grid: { display: false } } }
+  }
+});
+
+// --- Age / Tenure / Income small multiples ---
+barRateChart(document.getElementById('chartAge'), DATA.agegroup.labels, DATA.agegroup.rate);
+barRateChart(document.getElementById('chartTenure'), DATA.tenuregroup.labels, DATA.tenuregroup.rate);
+barRateChart(document.getElementById('chartIncome'), DATA.incomeq.labels, DATA.incomeq.rate);
+
+// --- Risk combo table ---
+const tbody = document.getElementById('riskTableBody');
+DATA.highrisk_combos.sort((a,b)=>b.rate-a.rate).forEach(c => {
+  let pillClass = c.rate>=40 ? 'crit' : c.rate>=25 ? 'high' : c.rate>=15 ? 'med' : 'low';
+  const tr = document.createElement('tr');
+  tr.innerHTML = `<td><b>${c.name}</b></td><td>${c.n}</td><td>${c.leavers}</td><td><span class="pill ${pillClass}">${c.rate}%</span></td>`;
+  tbody.appendChild(tr);
+});
+
+// --- Radar satisfaction ---
+new Chart(document.getElementById('chartRadar'), {
+  type: 'radar',
+  data: {
+    labels: DATA.satisfaction.labels,
+    datasets: [
+      { label: 'Ở lại', data: DATA.satisfaction.stay, backgroundColor: 'rgba(52,84,209,0.15)', borderColor: COLORS.indigo, pointBackgroundColor: COLORS.indigo, borderWidth: 2 },
+      { label: 'Nghỉ việc', data: DATA.satisfaction.leave, backgroundColor: 'rgba(214,52,71,0.15)', borderColor: COLORS.red, pointBackgroundColor: COLORS.red, borderWidth: 2 }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { position: 'bottom' } },
+    scales: { r: { min: 0, max: 4, ticks: { stepSize: 1, backdropColor: 'transparent' }, grid: { color: '#eef1f9' }, pointLabels: { font: { size: 11 } } } }
+  }
+});
+
+// --- Promo group ---
+barRateChart(document.getElementById('chartPromo'), DATA.promogroup.labels, DATA.promogroup.rate);
+
+// --- Numeric compare (normalized index, base=100 on "Ở lại") ---
+const numLabels = DATA.numeric_compare.labels;
+const idxStay = numLabels.map(()=>100);
+const idxLeave = DATA.numeric_compare.stay.map((s,i)=> s===0 ? 100 : Math.round(DATA.numeric_compare.leave[i]/s*100));
+new Chart(document.getElementById('chartNumeric'), {
+  type: 'bar',
+  data: {
+    labels: numLabels,
+    datasets: [
+      { label: 'Ở lại (chỉ số nền = 100)', data: idxStay, backgroundColor: '#c7d1f5', borderRadius: 6, maxBarThickness: 26 },
+      { label: 'Nghỉ việc (so với 100)', data: idxLeave, backgroundColor: idxLeave.map(v=>v<100?COLORS.red:COLORS.green), borderRadius: 6, maxBarThickness: 26 }
+    ]
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'bottom' },
+      tooltip: {
+        callbacks: {
+          label: (c) => {
+            const i = c.dataIndex;
+            const raw = c.datasetIndex===0 ? DATA.numeric_compare.stay[i] : DATA.numeric_compare.leave[i];
+            return c.dataset.label + ': ' + raw + ' (giá trị gốc)';
+          }
+        }
+      }
+    },
+    scales: { x: { title: { display: true, text: 'Chỉ số tương đối (Ở lại = 100)', font: {size: 11} }, grid: { color: '#eef1f9' } }, y: { grid: { display: false } } }
+  }
+});
+
+// --- Tab navigation ---
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(btn.dataset.tab).classList.add('active');
+    window.scrollTo({top: 0, behavior: 'smooth'});
+  });
+});
+</script>
+</body>
+</html>
